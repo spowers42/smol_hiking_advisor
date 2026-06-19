@@ -1,7 +1,7 @@
 import os
 from unittest.mock import MagicMock, patch
 
-from config import get_llm
+from app.config import get_llm
 
 
 class TestGetLLM:
