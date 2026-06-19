@@ -3,7 +3,7 @@ import warnings
 
 from dotenv import load_dotenv
 
-import constants
+from app import constants
 
 warnings.filterwarnings(
     "ignore",

@@ -1,4 +1,4 @@
-from agent import parse_assistant_response
+from app.agent import parse_assistant_response
 
 
 class TestParseAssistantResponse:

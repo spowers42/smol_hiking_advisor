@@ -1,7 +1,7 @@
 import gradio as gr
 
-import constants
-from agent import get_agent, parse_assistant_response
+from app import constants
+from app.agent import get_agent, parse_assistant_response
 
 agent_executor = get_agent()
 

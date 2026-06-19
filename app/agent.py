@@ -2,8 +2,8 @@ import re
 
 from langgraph.prebuilt import create_react_agent
 
-import constants
-from config import get_llm
+from app import constants
+from app.config import get_llm
 
 ASSISTANT_PATTERN = re.compile(
     r"(?:<\|assistant\|>|<\|start_header_id\|>assistant<\|end_header_id\|>)"
