@@ -1,6 +1,6 @@
 import pytest
 
-from user_preferences import get_user_preferences, set_preferences
+from app.tools.user_preferences import get_user_preferences, set_preferences
 
 
 @pytest.fixture(autouse=True)
