@@ -7,9 +7,16 @@ requires-python = ">=3.14"
 dependencies = [
     "gradio>=5",
     "langchain>=0.3",
+    "langchain-community>=0.3",
+    "langchain-huggingface>=0.1",
     "langchain-mcp-adapters>=0.3",
+    "langgraph>=0.4",
+    "llama-cpp-python>=0.3",
     "mcp>=1",
     "pydantic>=2",
+    "python-dotenv>=1",
+    "torch>=2",
+    "transformers>=4",
 ]
 
 [project.optional-dependencies]
@@ -32,3 +39,4 @@ quote-style = "double"
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+
