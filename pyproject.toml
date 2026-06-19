@@ -1,0 +1,34 @@
+[project]
+name = "smol-hiking-advisor"
+version = "0.1.0"
+description = "An agent using a smol language model to advise hikers in NH"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "gradio>=5",
+    "langchain>=0.3",
+    "langchain-mcp-adapters>=0.3",
+    "mcp>=1",
+    "pydantic>=2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.11",
+    "pytest>=8",
+    "pytest-asyncio>=0.25",
+]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
