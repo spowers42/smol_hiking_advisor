@@ -1,8 +1,8 @@
 import gradio as gr
 
-import constants
-from agent import get_agent, parse_assistant_response
-from user_preferences import set_preferences
+from app import constants
+from app.agent import get_agent, parse_assistant_response
+from app.tools.user_preferences import set_preferences
 
 agent_executor = get_agent()
 
