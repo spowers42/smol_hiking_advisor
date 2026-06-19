@@ -90,3 +90,54 @@ class TestParseAssistantResponse:
         assert result == "The answer is here."
         assert "System prompt here" not in result
         assert "Question" not in result
+
+    def test_strips_final_answer_prefix(self):
+        raw = "<|assistant|>Final Answer: Try Mount Major.<|end|>"
+        result = parse_assistant_response(raw)
+        assert result == "Try Mount Major."
+
+    def test_strips_thought_and_final_answer(self):
+        raw = (
+            "<|assistant|>"
+            "Thought: I have the hiker's profile.\n"
+            "Final Answer: The Franconia Ridge Loop is a great fit.\n"
+            "<|end|>"
+        )
+        result = parse_assistant_response(raw)
+        assert result == "The Franconia Ridge Loop is a great fit."
+
+    def test_strips_multiline_final_answer(self):
+        raw = (
+            "<|assistant|>Final Answer: Here are some hikes:\n"
+            "- Mount Major\n- Franconia Ridge<|end|>"
+        )
+        result = parse_assistant_response(raw)
+        expected = "Here are some hikes:\n- Mount Major\n- Franconia Ridge"
+        assert result == expected
+
+    def test_passes_through_plain_text_without_final_answer(self):
+        raw = "<|assistant|>Just a regular response.<|end|>"
+        result = parse_assistant_response(raw)
+        assert result == "Just a regular response."
+
+    def test_strips_final_answer_from_tag_stripped_text(self):
+        raw = (
+            "Thought: I have the hiker's profile. "
+            "Given your high fitness, I should suggest a challenging trail.\n"
+            "Final Answer: The Presidential Traverse is a great option."
+        )
+        result = parse_assistant_response(raw)
+        assert result == "The Presidential Traverse is a great option."
+
+    def test_strips_react_format_with_question_and_action(self):
+        raw = (
+            "Question: You're looking for a challenging hike?\n"
+            "Thought: I should check preferences first.\n"
+            "Action: get_user_preferences\n"
+            "Action Input: {}\n"
+            'Observation: {"fitness_level": 8, "experience_level": 8, "group_size": "Solo"}\n'
+            "Thought: Now I have the profile.\n"
+            "Final Answer: Mount Major is a great option."
+        )
+        result = parse_assistant_response(raw)
+        assert result == "Mount Major is a great option."
