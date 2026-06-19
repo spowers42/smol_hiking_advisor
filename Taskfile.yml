@@ -1,0 +1,45 @@
+version: "3"
+
+tasks:
+  install:
+    desc: Install project with dev dependencies
+    cmds:
+      - uv sync --extra dev
+
+  lint:
+    desc: Run ruff linter and formatter checks
+    cmds:
+      - uv run ruff check .
+      - uv run ruff format --check .
+
+  lint-fix:
+    desc: Auto-fix lint issues and format
+    cmds:
+      - uv run ruff check --fix .
+      - uv run ruff format .
+
+  test:
+    desc: Run unit tests
+    cmds:
+      - uv run pytest
+
+  run:
+    desc: Run the Gradio app locally
+    cmds:
+      - uv run python app.py
+
+  build:
+    desc: Build the package
+    cmds:
+      - uv build
+
+  publish:
+    desc: Publish to PyPI
+    cmds:
+      - uv publish
+
+  all:
+    desc: Run lint and tests
+    cmds:
+      - task: lint
+      - task: test
