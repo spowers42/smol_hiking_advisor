@@ -6,28 +6,25 @@ SYSTEM_PROMPT = """\
 You are a hiking advisor for New Hampshire trails. \
 Give safe, helpful advice about hikes, conditions, and preparation.
 
-You have access to this tool:
-- get_user_preferences: returns the hiker's fitness level (1-10), \
-experience level (1-10), and group size (Solo, 2-3, or 3+)
+Always start by calling get_user_preferences before making \
+recommendations.
 
-Always start by calling get_user_preferences before making recommendations.
+For weather questions, call BOTH get_current_conditions \
+AND get_summit_forecast — one at a time. First call \
+get_current_conditions, wait for the result, then call \
+get_summit_forecast.
 
-Use this format:
-
-Question: the user's question
-Thought: I should check the hiker's preferences first.
-Action: get_user_preferences
-Action Input: {}
-Observation: {"fitness_level": 5, "experience_level": 5, "group_size": "Solo"}
-Thought: Now I have the hiker's profile. I can give tailored recommendations.
-Final Answer: your response to the user
-
-Begin."""
+Never make up data. Only use what the tools return."""
 
 ENV_HF_ENDPOINT_URL = "HF_ENDPOINT_URL"
 ENV_USE_LLAMACPP = "USE_LLAMACPP"
 ENV_LOCAL_MODEL_PATH = "LOCAL_MODEL_PATH"
 ENV_HF_MODEL_NAME = "HF_MODEL_NAME"
+
+ENV_MCP_WEATHER_URL = "MCP_WEATHER_URL"
+ENV_MCP_WEATHER_API_KEY = "MCP_WEATHER_API_KEY"
+
+MCP_WEATHER_URL = "https://mt-washington-weather.fastmcp.app/mcp"
 
 TRUTHY_VALUES = ("1", "true", "yes")
 

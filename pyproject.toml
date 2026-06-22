@@ -5,6 +5,7 @@ description = "An agent using a smol language model to advise hikers in NH"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+    "deepeval>=4.0.6",
     "gradio>=5",
     "langchain>=0.3",
     "langchain-community>=0.3",
