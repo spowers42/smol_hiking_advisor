@@ -2,7 +2,12 @@ import pytest
 from deepeval import assert_test
 from deepeval.test_case import LLMTestCase, ToolCall
 
-from app.agent import get_agent
+from app import constants
+from app.config import get_llm
+from app.models.tool_calling_model import ToolCallingChatModel
+from app.runtime import AgentRuntime, RuntimeConfig
+from app.tools.user_preferences import get_user_preferences
+from app.tools.weather import connect as connect_weather_mcp
 from app.tools.weather import get_weather_tools
 
 from .metrics import ToolSelectionMetric, parse_tools_called
@@ -27,19 +32,18 @@ GOLDENS = [
     },
 ]
 
-AGENT = None
 
-
-def get_or_create_agent():
-    global AGENT
-    if AGENT is None:
-        AGENT = get_agent()
-    return AGENT
+def build_agent() -> AgentRuntime:
+    connect_weather_mcp()
+    llm = ToolCallingChatModel(chat=get_llm())
+    tools = [get_user_preferences, *get_weather_tools()]
+    config = RuntimeConfig(llm=llm, tools=tools, prompt=constants.SYSTEM_PROMPT)
+    return AgentRuntime(config)
 
 
 @pytest.mark.parametrize("golden", GOLDENS)
 def test_tool_selection(golden):
-    agent = get_or_create_agent()
+    agent = build_agent()
 
     weather_available = any(t.name in WEATHER_TOOL_NAMES for t in get_weather_tools())
     needs_weather = any(tc.name in WEATHER_TOOL_NAMES for tc in golden["expected_tools"])
