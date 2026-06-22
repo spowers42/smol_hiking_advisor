@@ -15,8 +15,10 @@ description: Create a branch, fix lint, run tests, and open a PR.
 
 3. **Rebase** — run `git rebase main`. If there are conflicts, stop and report them. Do not proceed until conflicts are resolved.
 
-4. **Fix lint** — run `task lint-fix`.
+4. **Fix lint** — run `task lint-fix`. If any files were modified, stage them with `git add -u`.
 
-5. **Run tests** — run `task test`. If tests fail, stop and report the failures. Do not open a PR with failing tests.
+5. **Run lint check** — run `task lint` to confirm no remaining issues. If it fails, stop and report them.
 
-6. **Commit and open a PR** — if there are staged changes, commit them with a descriptive message, then run `gh pr create --fill`. If nothing is staged, commit the lint fixes with a descriptive message, then open the PR. Return the PR URL.
+6. **Run tests** — run `task test`. If tests fail, stop and report the failures. Do not open a PR with failing tests.
+
+7. **Commit and open a PR** — if there are staged changes, commit them with a descriptive message, then run `gh pr create --fill`. If nothing is staged, commit the lint fixes with a descriptive message, then open the PR. Return the PR URL.
