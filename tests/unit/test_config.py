@@ -78,7 +78,7 @@ class TestGetLLM:
         mock_hf_pipeline.from_model_id.assert_called_once_with(
             model_id="meta-llama/Llama-3.2-3B-Instruct",
             task="text-generation",
-            pipeline_kwargs={"max_new_tokens": 4096},
+            pipeline_kwargs={"max_new_tokens": 4096, "return_full_text": False},
         )
         mock_chat_hf.assert_called_once_with(llm=mock_hf_pipeline.from_model_id.return_value)
         assert result is mock_chat_hf.return_value
@@ -96,7 +96,7 @@ class TestGetLLM:
         mock_hf_pipeline.from_model_id.assert_called_once_with(
             model_id="facebook/opt-125m",
             task="text-generation",
-            pipeline_kwargs={"max_new_tokens": 4096},
+            pipeline_kwargs={"max_new_tokens": 4096, "return_full_text": False},
         )
         assert result is mock_chat_hf.return_value
 

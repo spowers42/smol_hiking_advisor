@@ -2,6 +2,9 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any
 
+from langchain_core.messages import BaseMessage
+from langchain_core.messages.utils import convert_to_messages
+
 from app.agent import SimpleReActAgent
 
 logger = logging.getLogger(__name__)
@@ -30,4 +33,6 @@ class AgentRuntime:
         )
 
     def invoke(self, input_dict: dict) -> dict:
-        return self._agent.invoke(input_dict)
+        raw_messages = input_dict.get("messages", [])
+        messages = convert_to_messages(raw_messages)
+        return self._agent.invoke({"messages": messages})
