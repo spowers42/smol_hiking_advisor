@@ -2,9 +2,16 @@ import pytest
 from deepeval import assert_test
 from deepeval.test_case import LLMTestCase, ToolCall
 
-from app.agent import get_agent
+from app import constants
+from app.config import get_llm
+from app.runtime import AgentRuntime, RuntimeConfig
+from app.tools.user_preferences import get_user_preferences
+from app.tools.weather import connect as connect_weather_mcp
+from app.tools.weather import get_weather_tools
 
 from .metrics import ToolSelectionMetric, parse_tools_called
+
+WEATHER_TOOL_NAMES = {"get_current_conditions", "get_summit_forecast"}
 
 GOLDENS = [
     {
@@ -24,26 +31,29 @@ GOLDENS = [
     },
 ]
 
-AGENT = None
 
-
-def get_or_create_agent():
-    global AGENT
-    if AGENT is None:
-        AGENT = get_agent()
-    return AGENT
+def build_agent() -> AgentRuntime:
+    connect_weather_mcp()
+    llm = get_llm()
+    tools = [get_user_preferences, *get_weather_tools()]
+    config = RuntimeConfig(llm=llm, tools=tools, prompt=constants.SYSTEM_PROMPT)
+    return AgentRuntime(config)
 
 
 @pytest.mark.parametrize("golden", GOLDENS)
 def test_tool_selection(golden):
-    agent = get_or_create_agent()
-    result = agent.invoke({"messages": [{"role": "user", "content": golden["input"]}]})
+    agent = build_agent()
 
-    last_msg = result["messages"][-1]
+    weather_available = any(t.name in WEATHER_TOOL_NAMES for t in get_weather_tools())
+    needs_weather = any(tc.name in WEATHER_TOOL_NAMES for tc in golden["expected_tools"])
+    if needs_weather and not weather_available:
+        pytest.skip("MCP weather server not available")
+
+    result = agent.invoke({"messages": [{"role": "user", "content": golden["input"]}]})
 
     tc = LLMTestCase(
         input=golden["input"],
-        actual_output=last_msg.content,
+        actual_output=result["messages"][-1].content,
         tools_called=parse_tools_called(result),
         expected_tools=golden["expected_tools"],
     )

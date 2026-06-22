@@ -1,143 +1,93 @@
-from app.agent import parse_assistant_response
+from unittest.mock import MagicMock, patch
+
+from langchain_core.messages import AIMessage, HumanMessage
+
+from app.agent import SimpleReActAgent
 
 
-class TestParseAssistantResponse:
-    def test_extracts_text_after_assistant_tag(self):
-        raw = (
-            "<|system|>You are a hiking advisor.<|end|>\n"
-            "<|user|>What trails are good?<|end|>\n"
-            "<|assistant|>Mount Major is a great option today.<|end|>"
+class TestSimpleReActAgent:
+    @patch("app.agent.create_agent")
+    def test_invoke_delegates_to_create_agent(self, mock_create_agent):
+        mock_agent = MagicMock()
+        mock_agent.invoke.return_value = {
+            "messages": [
+                HumanMessage(content="Good hike?"),
+                AIMessage(content="Mount Major is great."),
+            ],
+        }
+        mock_create_agent.return_value = mock_agent
+
+        agent = SimpleReActAgent(llm=MagicMock(), tools=[], prompt="You are a hiking guide.")
+        result = agent.invoke({"messages": [("human", "Good hike?")]})
+
+        assert result["messages"][-1].content == "Mount Major is great."
+        mock_create_agent.assert_called_once()
+        mock_agent.invoke.assert_called_once()
+
+    @patch("app.agent.create_agent")
+    def test_creates_agent_with_llm_and_tools(self, mock_create_agent):
+        llm = MagicMock()
+        tool = MagicMock()
+        tool.name = "get_weather"
+
+        SimpleReActAgent(llm=llm, tools=[tool], prompt="You are helpful.")
+
+        mock_create_agent.assert_called_once()
+        _, kwargs = mock_create_agent.call_args
+        assert kwargs["model"] is llm
+        assert kwargs["tools"] == [tool]
+        assert kwargs["system_prompt"] == "You are helpful."
+
+    @patch("app.agent.create_agent")
+    def test_passes_recursion_limit_from_max_iterations(self, mock_create_agent):
+        mock_agent = MagicMock()
+        mock_create_agent.return_value = mock_agent
+
+        agent = SimpleReActAgent(
+            llm=MagicMock(), tools=[], prompt="You are helpful.", max_iterations=5
         )
-        result = parse_assistant_response(raw)
-        assert result == "Mount Major is a great option today."
-        assert "hiking advisor" not in result
-        assert "What trails" not in result
+        agent.invoke({"messages": [("human", "Hi")]})
 
-    def test_handles_multiple_turns(self):
-        raw = (
-            "<|system|>You are a hiking advisor.<|end|>\n"
-            "<|user|>Hi<|end|>\n"
-            "<|assistant|>Hello!<|end|>\n"
-            "<|user|>Best trail?<|end|>\n"
-            "<|assistant|>The Franconia Ridge Loop is stunning.<|end|>"
-        )
-        result = parse_assistant_response(raw)
-        assert result == "The Franconia Ridge Loop is stunning."
-        assert "Hello" not in result
-        assert "Best trail" not in result
+        _, kwargs = mock_agent.invoke.call_args
+        assert kwargs["config"]["recursion_limit"] == 15  # 5 * 2 + 5
 
-    def test_returns_full_text_when_no_assistant_tag(self):
-        raw = "Just a plain response without tags."
-        assert parse_assistant_response(raw) == raw
+    @patch("app.agent.create_agent")
+    def test_returns_tool_calls_in_messages(self, mock_create_agent):
+        tool = MagicMock()
+        tool.name = "get_weather"
 
-    def test_handles_trailing_whitespace(self):
-        raw = "<|assistant|>  A nice hike with extra spaces.  <|end|>"
-        expected = "A nice hike with extra spaces."
-        assert parse_assistant_response(raw) == expected
+        mock_agent = MagicMock()
+        mock_agent.invoke.return_value = {
+            "messages": [
+                HumanMessage(content="Weather?"),
+                AIMessage(
+                    content="",
+                    tool_calls=[
+                        {"name": "get_weather", "args": {}, "id": "1", "type": "tool_call"}
+                    ],
+                ),
+            ],
+        }
+        mock_create_agent.return_value = mock_agent
 
-    def test_handles_empty_response(self):
-        raw = "<|assistant|><|end|>"
-        expected = ""
-        assert parse_assistant_response(raw) == expected
+        agent = SimpleReActAgent(llm=MagicMock(), tools=[tool], prompt="You are helpful.")
+        result = agent.invoke({"messages": [("human", "Weather?")]})
 
-    def test_handles_plain_text_with_tags_not_assistant(self):
-        raw = "<|system|>Do not show this.<|end|>"
-        assert parse_assistant_response(raw) == raw
+        ai_msg = result["messages"][-1]
+        assert len(ai_msg.tool_calls) == 1
+        assert ai_msg.tool_calls[0]["name"] == "get_weather"
 
-    def test_no_closing_end_tag(self):
-        raw = (
-            "<|system|>You are a hiking advisor.<|end|>\n"
-            "<|user|>hi, who are you?<|end|>\n"
-            "<|assistant|>\n"
-            "Hello! I'm Phi. I can help with hiking."  # no trailing <|end|>
-        )
-        result = parse_assistant_response(raw)
-        assert result == "Hello! I'm Phi. I can help with hiking."
-        assert "You are a hiking advisor" not in result
-        assert "hi, who are you" not in result
+    @patch("app.agent.create_agent")
+    def test_works_with_empty_tools(self, mock_create_agent):
+        mock_agent = MagicMock()
+        mock_agent.invoke.return_value = {
+            "messages": [
+                HumanMessage(content="Best hike?"),
+                AIMessage(content="Franconia Ridge is great."),
+            ],
+        }
+        mock_create_agent.return_value = mock_agent
 
-    def test_handles_llama_format(self):
-        raw = (
-            "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n"
-            "\n"
-            "You are a hiking advisor.<|eot_id|>"
-            "<|start_header_id|>user<|end_header_id|>\n"
-            "\n"
-            "What trails are good?<|eot_id|>"
-            "<|start_header_id|>assistant<|end_header_id|>\n"
-            "\n"
-            "Mount Major is a great option today."
-        )
-        result = parse_assistant_response(raw)
-        assert result == "Mount Major is a great option today."
-        assert "system" not in result
-        assert "What trails" not in result
-        assert "begin_of_text" not in result
-
-    def test_handles_llama_format_with_closing_eot_id(self):
-        raw = (
-            "<|start_header_id|>system<|end_header_id|>\n"
-            "\n"
-            "System prompt here.<|eot_id|>"
-            "<|start_header_id|>user<|end_header_id|>\n"
-            "\n"
-            "Question?<|eot_id|>"
-            "<|start_header_id|>assistant<|end_header_id|>\n"
-            "\n"
-            "The answer is here.<|eot_id|>"
-        )
-        result = parse_assistant_response(raw)
-        assert result == "The answer is here."
-        assert "System prompt here" not in result
-        assert "Question" not in result
-
-    def test_strips_final_answer_prefix(self):
-        raw = "<|assistant|>Final Answer: Try Mount Major.<|end|>"
-        result = parse_assistant_response(raw)
-        assert result == "Try Mount Major."
-
-    def test_strips_thought_and_final_answer(self):
-        raw = (
-            "<|assistant|>"
-            "Thought: I have the hiker's profile.\n"
-            "Final Answer: The Franconia Ridge Loop is a great fit.\n"
-            "<|end|>"
-        )
-        result = parse_assistant_response(raw)
-        assert result == "The Franconia Ridge Loop is a great fit."
-
-    def test_strips_multiline_final_answer(self):
-        raw = (
-            "<|assistant|>Final Answer: Here are some hikes:\n"
-            "- Mount Major\n- Franconia Ridge<|end|>"
-        )
-        result = parse_assistant_response(raw)
-        expected = "Here are some hikes:\n- Mount Major\n- Franconia Ridge"
-        assert result == expected
-
-    def test_passes_through_plain_text_without_final_answer(self):
-        raw = "<|assistant|>Just a regular response.<|end|>"
-        result = parse_assistant_response(raw)
-        assert result == "Just a regular response."
-
-    def test_strips_final_answer_from_tag_stripped_text(self):
-        raw = (
-            "Thought: I have the hiker's profile. "
-            "Given your high fitness, I should suggest a challenging trail.\n"
-            "Final Answer: The Presidential Traverse is a great option."
-        )
-        result = parse_assistant_response(raw)
-        assert result == "The Presidential Traverse is a great option."
-
-    def test_strips_react_format_with_question_and_action(self):
-        raw = (
-            "Question: You're looking for a challenging hike?\n"
-            "Thought: I should check preferences first.\n"
-            "Action: get_user_preferences\n"
-            "Action Input: {}\n"
-            'Observation: {"fitness_level": 8, "experience_level": 8, "group_size": "Solo"}\n'
-            "Thought: Now I have the profile.\n"
-            "Final Answer: Mount Major is a great option."
-        )
-        result = parse_assistant_response(raw)
-        assert result == "Mount Major is a great option."
+        agent = SimpleReActAgent(llm=MagicMock(), tools=[], prompt="You are a hiking guide.")
+        result = agent.invoke({"messages": [("human", "Best hike?")]})
+        assert "Franconia" in result["messages"][-1].content

@@ -18,7 +18,9 @@ Never make up data. Only use what the tools return."""
 
 ENV_HF_ENDPOINT_URL = "HF_ENDPOINT_URL"
 ENV_USE_LLAMACPP = "USE_LLAMACPP"
-ENV_LOCAL_MODEL_PATH = "LOCAL_MODEL_PATH"
+ENV_LLAMACPP_HOST = "LLAMACPP_HOST"
+ENV_LLAMACPP_PORT = "LLAMACPP_PORT"
+ENV_LLAMACPP_MODEL_NAME = "LLAMACPP_MODEL_NAME"
 ENV_HF_MODEL_NAME = "HF_MODEL_NAME"
 
 ENV_MCP_WEATHER_URL = "MCP_WEATHER_URL"
@@ -28,7 +30,8 @@ MCP_WEATHER_URL = "https://mt-washington-weather.fastmcp.app/mcp"
 
 TRUTHY_VALUES = ("1", "true", "yes")
 
-DEFAULT_LOCAL_MODEL_PATH = "./models/model.gguf"
+DEFAULT_LLAMACPP_HOST = "localhost"
+DEFAULT_LLAMACPP_PORT = 8080
 DEFAULT_MODEL_NAME = "meta-llama/Llama-3.2-3B-Instruct"
 FALLBACK_MODEL_NAME = "microsoft/Phi-3-mini-4k-instruct"
 

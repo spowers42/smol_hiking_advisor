@@ -48,3 +48,4 @@ tasks:
     cmds:
       - task: lint
       - task: test
+      - task: eval

@@ -118,4 +118,8 @@ async def connect_async() -> None:
 
 
 def connect() -> None:
-    asyncio.run(connect_async())
+    try:
+        asyncio.get_running_loop()
+        logger.warning("Called from async context; connect_async() must be awaited separately")
+    except RuntimeError:
+        asyncio.run(connect_async())
