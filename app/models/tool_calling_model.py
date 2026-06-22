@@ -1,6 +1,4 @@
-import json
-import re
-from typing import Any, Dict, List, Optional
+from typing import Any, List, Optional
 from uuid import uuid4
 
 from langchain_core.callbacks import CallbackManagerForLLMRun
@@ -14,31 +12,11 @@ from langchain_core.messages import (
     ToolMessage,
 )
 from langchain_core.outputs import ChatGeneration, ChatResult
+from langchain_core.tools.render import render_text_description_and_args
 from langchain_huggingface import ChatHuggingFace
 from pydantic import PrivateAttr
 
-_FN_CALL_RE = re.compile(
-    r'\{\s*"function"\s*:\s*"([^"]+)"(?:\s*,\s*(?:"arguments"\s*:\s*)?(\{.*?\}|".*?"))?\s*\}',
-    re.DOTALL,
-)
-
-
-def _tools_block(tools: List[Dict[str, Any]]) -> str:
-    parts = ["You have access to the following functions. Use them when needed."]
-    for t in tools:
-        name = t.get("name", "?")
-        desc = t.get("description", "")
-        parts.append(f"\nFunction: {name}")
-        parts.append(f"Description: {desc}")
-        params = t.get("parameters", {})
-        if params:
-            parts.append(f"Parameters: {json.dumps(params)}")
-    parts.append(
-        "\n\nWhen you need to call a function, respond with ONLY a JSON object "
-        'on its own line in this format:\n{"function": "name", "arguments": {}}\n'
-        "Call one function at a time."
-    )
-    return "\n".join(parts)
+from app.models.tool_serialization import parse_tool_call
 
 
 class ToolCallingChatModel(BaseChatModel):
@@ -80,26 +58,9 @@ class ToolCallingChatModel(BaseChatModel):
         generations = []
         for gen in llm_result.generations[0]:
             text = gen.text.strip()
-            match = _FN_CALL_RE.search(text)
-            if match:
-                name = match.group(1)
-                args_raw = match.group(2)
-                if args_raw:
-                    if args_raw.startswith('"') and args_raw.endswith('"'):
-                        inner = args_raw[1:-1]
-                        try:
-                            args = json.loads(inner) if inner else {}
-                        except json.JSONDecodeError:
-                            args = {}
-                    else:
-                        try:
-                            args = json.loads(args_raw)
-                        except json.JSONDecodeError:
-                            args = {}
-                else:
-                    args = {}
-                if not isinstance(args, dict):
-                    args = {}
+            parsed = parse_tool_call(text)
+            if parsed:
+                name, args = parsed
                 msg = AIMessage(
                     content=text,
                     tool_calls=[
@@ -126,10 +87,16 @@ class ToolCallingChatModel(BaseChatModel):
         return self._generate(messages, stop=stop, run_manager=run_manager, **kwargs)
 
     def _inject_tool_descriptions(
-        self, messages: List[BaseMessage], tools: List[Dict[str, Any]]
+        self, messages: List[BaseMessage], tools: List
     ) -> List[BaseMessage]:
         messages = list(messages)
-        block = _tools_block(tools)
+        rendered = render_text_description_and_args(tools)
+        instructions = (
+            "\n\nWhen you need to call a function, respond with ONLY a JSON object "
+            'on its own line in this format:\n{"function": "name", "arguments": {}}\n'
+            "Call one function at a time."
+        )
+        block = rendered + instructions
         for i, m in enumerate(messages):
             if isinstance(m, SystemMessage):
                 messages[i] = SystemMessage(content=m.content + "\n\n" + block)

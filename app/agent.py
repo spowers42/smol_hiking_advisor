@@ -27,18 +27,6 @@ def parse_assistant_response(raw: str) -> str:
     return text
 
 
-def _tool_dict(t):
-    try:
-        params = t.tool_call_schema.model_json_schema()
-    except Exception:
-        params = {}
-    return {
-        "name": t.name,
-        "description": t.description,
-        "parameters": params,
-    }
-
-
 class SimpleReActAgent:
     def __init__(self, llm, tools, prompt, max_iterations=10):
         self.llm = llm
@@ -57,10 +45,8 @@ class SimpleReActAgent:
             else:
                 messages.append(HumanMessage(content=msg["content"]))
 
-        tool_dicts = [_tool_dict(t) for t in self._tool_objects.values()]
-
         for _ in range(self.max_iterations):
-            response = self.llm.invoke(messages, tools=tool_dicts)
+            response = self.llm.invoke(messages, tools=list(self._tool_objects.values()))
             messages.append(response)
 
             if not response.tool_calls:
