@@ -4,7 +4,6 @@ from deepeval.test_case import LLMTestCase, ToolCall
 
 from app import constants
 from app.config import get_llm
-from app.models.tool_calling_model import ToolCallingChatModel
 from app.runtime import AgentRuntime, RuntimeConfig
 from app.tools.user_preferences import get_user_preferences
 from app.tools.weather import connect as connect_weather_mcp
@@ -35,7 +34,7 @@ GOLDENS = [
 
 def build_agent() -> AgentRuntime:
     connect_weather_mcp()
-    llm = ToolCallingChatModel(chat=get_llm())
+    llm = get_llm()
     tools = [get_user_preferences, *get_weather_tools()]
     config = RuntimeConfig(llm=llm, tools=tools, prompt=constants.SYSTEM_PROMPT)
     return AgentRuntime(config)
@@ -52,11 +51,9 @@ def test_tool_selection(golden):
 
     result = agent.invoke({"messages": [{"role": "user", "content": golden["input"]}]})
 
-    last_msg = result["messages"][-1]
-
     tc = LLMTestCase(
         input=golden["input"],
-        actual_output=last_msg.content,
+        actual_output=result["messages"][-1].content,
         tools_called=parse_tools_called(result),
         expected_tools=golden["expected_tools"],
     )

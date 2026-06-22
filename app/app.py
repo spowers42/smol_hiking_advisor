@@ -1,16 +1,14 @@
 import gradio as gr
 
 from app import constants
-from app.agent import parse_assistant_response
 from app.config import get_llm
-from app.models.tool_calling_model import ToolCallingChatModel
 from app.runtime import AgentRuntime, RuntimeConfig
 from app.tools.user_preferences import get_user_preferences, set_preferences
 from app.tools.weather import connect as connect_weather_mcp
 from app.tools.weather import get_weather_tools
 
 connect_weather_mcp()
-llm = ToolCallingChatModel(chat=get_llm())
+llm = get_llm()
 tools = [get_user_preferences, *get_weather_tools()]
 config = RuntimeConfig(llm=llm, tools=tools, prompt=constants.SYSTEM_PROMPT)
 agent_executor = AgentRuntime(config)
@@ -18,7 +16,7 @@ agent_executor = AgentRuntime(config)
 
 def respond(message, history):
     result = agent_executor.invoke({"messages": [("human", message)]})
-    return parse_assistant_response(result["messages"][-1].content)
+    return result["messages"][-1].content
 
 
 def update_prefs(fitness: int, experience: int, group: str):

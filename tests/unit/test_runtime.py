@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from langchain_core.messages import AIMessage, HumanMessage
 
@@ -25,18 +25,39 @@ class TestRuntimeConfig:
 
 
 class TestAgentRuntime:
-    def test_invoke_delegates_to_agent(self):
-        llm = MagicMock()
-        llm.invoke.return_value = AIMessage(content="Mount Major is great.")
-        config = RuntimeConfig(llm=llm, tools=[], prompt="You are a hiking guide.")
-        runtime = AgentRuntime(config)
-        result = runtime.invoke({"messages": [HumanMessage(content="Good hike?")]})
-        assert "Mount Major" in result["messages"][-1].content
+    @patch("app.runtime.SimpleReActAgent")
+    def test_invoke_delegates_to_agent(self, mock_simple_agent):
+        mock_agent_instance = MagicMock()
+        mock_agent_instance.invoke.return_value = {
+            "messages": [
+                HumanMessage(content="Good hike?"),
+                AIMessage(content="Mount Major is great."),
+            ],
+        }
+        mock_simple_agent.return_value = mock_agent_instance
 
-    def test_works_with_empty_tools(self):
-        llm = MagicMock()
-        llm.invoke.return_value = AIMessage(content="Try the Franconia Ridge Loop.")
-        config = RuntimeConfig(llm=llm, prompt="You are helpful.")
+        config = RuntimeConfig(llm=MagicMock(), tools=[], prompt="You are a hiking guide.")
         runtime = AgentRuntime(config)
-        result = runtime.invoke({"messages": [HumanMessage(content="Best hike?")]})
-        assert "Franconia Ridge" in result["messages"][-1].content
+        result = runtime.invoke({"messages": [("human", "Good hike?")]})
+
+        assert result["messages"][-1].content == "Mount Major is great."
+        mock_simple_agent.assert_called_once_with(
+            llm=config.llm, tools=config.tools, prompt=config.prompt, max_iterations=10
+        )
+
+    @patch("app.runtime.SimpleReActAgent")
+    def test_works_with_empty_tools(self, mock_simple_agent):
+        mock_agent_instance = MagicMock()
+        mock_agent_instance.invoke.return_value = {
+            "messages": [
+                HumanMessage(content="Best hike?"),
+                AIMessage(content="Franconia Ridge is great."),
+            ],
+        }
+        mock_simple_agent.return_value = mock_agent_instance
+
+        config = RuntimeConfig(llm=MagicMock(), tools=[], prompt="You are helpful.")
+        runtime = AgentRuntime(config)
+        result = runtime.invoke({"messages": [("human", "Best hike?")]})
+
+        assert "Franconia" in result["messages"][-1].content
