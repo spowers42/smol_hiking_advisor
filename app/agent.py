@@ -16,7 +16,6 @@ from app.tools.user_preferences import get_user_preferences
 from app.tools.weather import connect as connect_weather_mcp
 from app.tools.weather import get_weather_tools
 
-
 ASSISTANT_PATTERN = re.compile(
     r"(?:<\|assistant\|>|<\|start_header_id\|>assistant<\|end_header_id\|>)"
     r"(.*?)(?:<\|end\|>|<\|eot_id\|>|$)",
