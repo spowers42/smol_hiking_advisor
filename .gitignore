@@ -209,6 +209,9 @@ tempCodeRunnerFile.py
 # Session logs
 session_logs/
 
+# DeepEval
+.deepeval/
+
 # PyPI configuration file
 .pypirc
 
