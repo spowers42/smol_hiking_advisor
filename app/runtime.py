@@ -2,7 +2,6 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any
 
-from langchain_core.messages import BaseMessage
 from langchain_core.messages.utils import convert_to_messages
 
 from app.agent import SimpleReActAgent

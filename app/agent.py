@@ -1,45 +1,14 @@
 import asyncio
-import json
-import re
-from typing import Any, List, Optional
-from uuid import uuid4
+from typing import Any, List
 
 from langchain.agents import create_agent
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolCall, ToolMessage
+from langchain_core.messages import AIMessage, BaseMessage, SystemMessage, ToolMessage
 from langchain_core.outputs import ChatGeneration, ChatResult
 from langchain_core.tools import StructuredTool
 from langchain_core.tools.render import render_text_description_and_args
 from langchain_huggingface import ChatHuggingFace
 
-_FN_CALL_RE = re.compile(
-    r'\{\s*"function"\s*:\s*"([^"]+)"(?:\s*,\s*(?:"arguments"\s*:\s*)?(\{.*?\}|".*?"))?\s*\}',
-    re.DOTALL,
-)
-
-
-def parse_tool_call(text: str) -> Optional[tuple[str, dict]]:
-    match = _FN_CALL_RE.search(text)
-    if not match:
-        return None
-    name = match.group(1)
-    args_raw = match.group(2)
-    if args_raw:
-        if args_raw.startswith('"') and args_raw.endswith('"'):
-            inner = args_raw[1:-1]
-            try:
-                args = json.loads(inner) if inner else {}
-            except json.JSONDecodeError:
-                args = {}
-        else:
-            try:
-                args = json.loads(args_raw)
-            except json.JSONDecodeError:
-                args = {}
-    else:
-        args = {}
-    if not isinstance(args, dict):
-        args = {}
-    return (name, args)
+from app.response_parser import parse_model_output
 
 
 def _inject_tool_descriptions(messages: List[BaseMessage], tools: List) -> List[BaseMessage]:
@@ -67,15 +36,11 @@ def _inject_tool_descriptions(messages: List[BaseMessage], tools: List) -> List[
 def _parse_text_tool_calls(result: ChatResult, valid_tool_names: set) -> ChatResult:
     generations = []
     for gen in result.generations:
-        text = gen.message.content
-        parsed = parse_tool_call(text)
-        if parsed and parsed[0] in valid_tool_names:
-            name, args = parsed
+        parsed = parse_model_output(gen.message.content, valid_tool_names)
+        if parsed.tool_calls:
             msg = AIMessage(
-                content=text,
-                tool_calls=[
-                    ToolCall(name=name, args=args, id=f"call_{uuid4().hex[:12]}")
-                ],
+                content=parsed.text,
+                tool_calls=parsed.tool_calls,
             )
             generations.append(ChatGeneration(message=msg))
         else:
@@ -86,7 +51,11 @@ def _parse_text_tool_calls(result: ChatResult, valid_tool_names: set) -> ChatRes
 def _needs_local_tool_handling(llm: Any) -> bool:
     if not isinstance(llm, ChatHuggingFace):
         return False
-    from langchain_huggingface.chat_models.huggingface import _is_huggingface_endpoint, _is_huggingface_textgen_inference
+    from langchain_huggingface.chat_models.huggingface import (
+        _is_huggingface_endpoint,
+        _is_huggingface_textgen_inference,
+    )
+
     return not (_is_huggingface_endpoint(llm.llm) or _is_huggingface_textgen_inference(llm.llm))
 
 
@@ -97,7 +66,6 @@ def wrap_model_for_tools(model: Any, tools: List) -> Any:
     valid_tool_names = {t.name for t in tools}
     original_generate = model._generate
     original_to_chatml = model._to_chatml_format
-    original_to_chat_prompt = model._to_chat_prompt
 
     def _patched_to_chatml(message):
         if isinstance(message, ToolMessage):
