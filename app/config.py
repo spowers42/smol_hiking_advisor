@@ -53,7 +53,10 @@ def get_llm():
             llm = HuggingFacePipeline.from_model_id(
                 model_id=attempt,
                 task=constants.PIPELINE_TASK,
-                pipeline_kwargs={"max_new_tokens": constants.MAX_NEW_TOKENS},
+                pipeline_kwargs={
+                    "max_new_tokens": constants.MAX_NEW_TOKENS,
+                    "return_full_text": False,
+                },
             )
             break
         except OSError:
