@@ -58,6 +58,9 @@ class SimpleReActAgent:
         for msg in input_dict["messages"]:
             if isinstance(msg, BaseMessage):
                 messages.append(msg)
+            elif isinstance(msg, tuple):
+                _role, content = msg
+                messages.append(HumanMessage(content=content))
             else:
                 messages.append(HumanMessage(content=msg["content"]))
 
@@ -74,7 +77,11 @@ class SimpleReActAgent:
                 tool = self._tool_objects.get(tc["name"])
                 if tool:
                     try:
-                        result = asyncio.run(tool.ainvoke(tc["args"]))
+                        try:
+                            asyncio.get_running_loop()
+                            result = tool.invoke(tc["args"])
+                        except RuntimeError:
+                            result = asyncio.run(tool.ainvoke(tc["args"]))
                     except Exception as e:
                         result = {"error": str(e)}
                 else:

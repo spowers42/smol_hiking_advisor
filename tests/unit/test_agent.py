@@ -1,4 +1,9 @@
-from app.agent import parse_assistant_response
+import json
+from unittest.mock import AsyncMock, MagicMock
+
+from langchain_core.messages import AIMessage, HumanMessage, ToolCall, ToolMessage
+
+from app.agent import SimpleReActAgent, parse_assistant_response
 
 
 class TestParseAssistantResponse:
@@ -141,3 +146,111 @@ class TestParseAssistantResponse:
         )
         result = parse_assistant_response(raw)
         assert result == "Mount Major is a great option."
+
+
+class TestSimpleReActAgent:
+    def test_returns_llm_response_when_no_tools_called(self):
+        llm = MagicMock()
+        llm.invoke.return_value = AIMessage(content="Try Mount Major today.")
+        agent = SimpleReActAgent(llm=llm, tools=[], prompt="You are a hiking guide.")
+        result = agent.invoke({"messages": [HumanMessage(content="Good hike?")]})
+        last = result["messages"][-1]
+        assert "Mount Major" in last.content
+
+    def test_accepts_gradio_tuple_format(self):
+        llm = MagicMock()
+        llm.invoke.return_value = AIMessage(content="Try Mount Major today.")
+        agent = SimpleReActAgent(llm=llm, tools=[], prompt="You are a hiking guide.")
+        result = agent.invoke({"messages": [("human", "Good hike?")]})
+        last = result["messages"][-1]
+        assert "Mount Major" in last.content
+
+    def test_invokes_tool_and_appends_result(self):
+        tool = MagicMock()
+        tool.name = "get_user_preferences"
+        tool.description = "Get hiker preferences"
+        tool.invoke.return_value = {"fitness": 7}
+        tool.ainvoke = AsyncMock(return_value={"fitness": 7})
+
+        llm = MagicMock()
+        llm.invoke.side_effect = [
+            AIMessage(
+                content='{"function": "get_user_preferences", "arguments": {}}',
+                tool_calls=[ToolCall(name="get_user_preferences", args={}, id="call_1")],
+            ),
+            AIMessage(content="Final Answer: Mount Major is a great fit."),
+        ]
+
+        agent = SimpleReActAgent(llm=llm, tools=[tool], prompt="You are helpful.")
+        result = agent.invoke({"messages": [HumanMessage(content="Good hike?")]})
+
+        messages = result["messages"]
+        assert len(messages) == 5
+        assert isinstance(messages[3], ToolMessage)
+        data = json.loads(messages[3].content)
+        assert data == {"fitness": 7}
+
+    def test_captures_tool_execution_error(self):
+        tool = MagicMock()
+        tool.name = "get_user_preferences"
+        tool.description = "Get prefs"
+        tool.invoke.side_effect = ValueError("DB unavailable")
+        tool.ainvoke = AsyncMock(side_effect=ValueError("DB unavailable"))
+
+        llm = MagicMock()
+        llm.invoke.side_effect = [
+            AIMessage(
+                content='{"function": "get_user_preferences", "arguments": {}}',
+                tool_calls=[ToolCall(name="get_user_preferences", args={}, id="call_1")],
+            ),
+            AIMessage(content="Final Answer: I cannot get preferences right now."),
+        ]
+
+        agent = SimpleReActAgent(llm=llm, tools=[tool], prompt="You are helpful.")
+        result = agent.invoke({"messages": [HumanMessage(content="Good hike?")]})
+        tool_msg = result["messages"][3]
+        data = json.loads(tool_msg.content)
+        assert "error" in data
+
+    def test_handles_unknown_tool_name(self):
+        llm = MagicMock()
+        llm.invoke.side_effect = [
+            AIMessage(
+                content='{"function": "nonexistent", "arguments": {}}',
+                tool_calls=[ToolCall(name="nonexistent", args={}, id="call_1")],
+            ),
+            AIMessage(content="Final Answer: I don't know that tool."),
+        ]
+
+        agent = SimpleReActAgent(llm=llm, tools=[], prompt="You are helpful.")
+        result = agent.invoke({"messages": [HumanMessage(content="Test")]})
+        tool_msg = result["messages"][3]
+        assert "Unknown tool" in json.loads(tool_msg.content)["error"]
+
+    def test_stops_after_max_iterations(self):
+        tool = MagicMock()
+        tool.name = "looper"
+        tool.description = "Loops"
+        tool.invoke.return_value = {"done": False}
+        tool.ainvoke = AsyncMock(return_value={"done": False})
+
+        llm = MagicMock()
+        llm.invoke.return_value = AIMessage(
+            content='{"function": "looper", "arguments": {}}',
+            tool_calls=[ToolCall(name="looper", args={}, id="call_loop")],
+        )
+
+        agent = SimpleReActAgent(llm=llm, tools=[tool], prompt="You are helpful.", max_iterations=3)
+        result = agent.invoke({"messages": [HumanMessage(content="Loop")]})
+
+        tool_calls = [m for m in result["messages"] if isinstance(m, AIMessage) and m.tool_calls]
+        assert len(tool_calls) == 3
+
+    def test_works_with_empty_tool_list_graceful_degradation(self):
+        llm = MagicMock()
+        llm.invoke.return_value = AIMessage(
+            content="The Presidential Traverse is a great challenge."
+        )
+        agent = SimpleReActAgent(llm=llm, tools=[], prompt="You are a hiking guide.")
+        result = agent.invoke({"messages": [HumanMessage(content="Best hike?")]})
+        assert "Presidential Traverse" in result["messages"][-1].content

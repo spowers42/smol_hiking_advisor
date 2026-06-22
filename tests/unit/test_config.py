@@ -18,32 +18,56 @@ class TestGetLLM:
         mock_chat_hf.assert_called_once_with(llm=mock_hf_endpoint.return_value)
         assert result is mock_chat_hf.return_value
 
-    @patch("langchain_community.chat_models.ChatLlamaCpp")
-    def test_uses_llamacpp_when_flag_set(self, mock_chat_llama):
-        mock_chat_llama.return_value = MagicMock()
-        with patch.dict(
-            os.environ,
-            {"USE_LLAMACPP": "true", "LOCAL_MODEL_PATH": "./models/model.gguf"},
-            clear=True,
-        ):
+    @patch("langchain_openai.ChatOpenAI")
+    def test_uses_llamacpp_with_default_host_port(self, mock_chat_openai):
+        mock_chat_openai.return_value = MagicMock()
+        with patch.dict(os.environ, {"USE_LLAMACPP": "true"}, clear=True):
             result = get_llm()
-        mock_chat_llama.assert_called_once_with(model_path="./models/model.gguf")
-        assert result is mock_chat_llama.return_value
+        mock_chat_openai.assert_called_once_with(
+            base_url="http://localhost:8080/v1",
+            api_key="not-needed",
+            model=None,
+        )
+        assert result is mock_chat_openai.return_value
 
-    @patch("langchain_community.chat_models.ChatLlamaCpp")
-    def test_uses_llamacpp_with_custom_path(self, mock_chat_llama):
-        mock_chat_llama.return_value = MagicMock()
+    @patch("langchain_openai.ChatOpenAI")
+    def test_uses_llamacpp_with_custom_host_port(self, mock_chat_openai):
+        mock_chat_openai.return_value = MagicMock()
         with patch.dict(
             os.environ,
             {
                 "USE_LLAMACPP": "true",
-                "LOCAL_MODEL_PATH": "/custom/path/model.gguf",
+                "LLAMACPP_HOST": "10.0.0.5",
+                "LLAMACPP_PORT": "8088",
             },
             clear=True,
         ):
             result = get_llm()
-        mock_chat_llama.assert_called_once_with(model_path="/custom/path/model.gguf")
-        assert result is mock_chat_llama.return_value
+        mock_chat_openai.assert_called_once_with(
+            base_url="http://10.0.0.5:8088/v1",
+            api_key="not-needed",
+            model=None,
+        )
+        assert result is mock_chat_openai.return_value
+
+    @patch("langchain_openai.ChatOpenAI")
+    def test_uses_llamacpp_with_model_name(self, mock_chat_openai):
+        mock_chat_openai.return_value = MagicMock()
+        with patch.dict(
+            os.environ,
+            {
+                "USE_LLAMACPP": "true",
+                "LLAMACPP_MODEL_NAME": "llama3.2-3b",
+            },
+            clear=True,
+        ):
+            result = get_llm()
+        mock_chat_openai.assert_called_once_with(
+            base_url="http://localhost:8080/v1",
+            api_key="not-needed",
+            model="llama3.2-3b",
+        )
+        assert result is mock_chat_openai.return_value
 
     @patch("langchain_huggingface.ChatHuggingFace")
     @patch("langchain_huggingface.HuggingFacePipeline")

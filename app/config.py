@@ -26,12 +26,18 @@ def get_llm():
 
     use_llamacpp = os.environ.get(constants.ENV_USE_LLAMACPP, "").lower() in constants.TRUTHY_VALUES
     if use_llamacpp:
-        from langchain_community.chat_models import ChatLlamaCpp
+        from langchain_openai import ChatOpenAI
 
-        model_path = os.environ.get(
-            constants.ENV_LOCAL_MODEL_PATH, constants.DEFAULT_LOCAL_MODEL_PATH
+        host = os.environ.get(constants.ENV_LLAMACPP_HOST, constants.DEFAULT_LLAMACPP_HOST)
+        port = int(
+            os.environ.get(constants.ENV_LLAMACPP_PORT, str(constants.DEFAULT_LLAMACPP_PORT))
         )
-        return ChatLlamaCpp(model_path=model_path)
+        model = os.environ.get(constants.ENV_LLAMACPP_MODEL_NAME) or None
+        return ChatOpenAI(
+            base_url=f"http://{host}:{port}/v1",
+            api_key="not-needed",
+            model=model,
+        )
 
     from transformers.utils import logging as hf_logging
 
