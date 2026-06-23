@@ -1,4 +1,5 @@
 import asyncio
+import re
 from typing import Any, List
 
 from langchain.agents import create_agent
@@ -7,6 +8,7 @@ from langchain_core.outputs import ChatGeneration, ChatResult
 from langchain_core.tools import StructuredTool
 from langchain_core.tools.render import render_text_description_and_args
 from langchain_huggingface import ChatHuggingFace
+from langchain_openai import ChatOpenAI
 
 from app.response_parser import parse_model_output
 
@@ -48,6 +50,45 @@ def _parse_text_tool_calls(result: ChatResult, valid_tool_names: set) -> ChatRes
     return ChatResult(generations=generations, llm_output=result.llm_output)
 
 
+_TOOL_CALL_JSON_RE = re.compile(r'\{\s*"(?:name|function)"\s*:')
+
+
+def _strip_tool_call_content(result: ChatResult) -> ChatResult:
+    """Strip tool-call JSON from AIMessage content when tool_calls are present.
+
+    Some model servers (e.g. llama.cpp) include the raw generated tool-call
+    text in *both* the ``content`` field and the structured ``tool_calls``
+    field of assistant messages.  When that content is sent back to the server
+    on the next request the server's chat-template parser chokes on it.
+
+    This function detects that situation and clears the content.
+    """
+    generations = []
+    for gen in result.generations:
+        msg = gen.message
+        if (
+            isinstance(msg, AIMessage)
+            and msg.tool_calls
+            and isinstance(msg.content, str)
+            and msg.content
+            and _TOOL_CALL_JSON_RE.search(msg.content)
+        ):
+            msg.content = ""
+        generations.append(gen)
+    return ChatResult(generations=generations, llm_output=result.llm_output)
+
+
+def _patch_openai_content_stripping(model: ChatOpenAI) -> None:
+    """Patch ``_generate`` so assistant content is stripped when tool_calls exist."""
+    original_generate = model._generate
+
+    def _patched_generate(messages, stop=None, run_manager=None, **kwargs):
+        result = original_generate(messages, stop=stop, run_manager=run_manager, **kwargs)
+        return _strip_tool_call_content(result)
+
+    model._generate = _patched_generate
+
+
 def _needs_local_tool_handling(llm: Any) -> bool:
     if not isinstance(llm, ChatHuggingFace):
         return False
@@ -60,7 +101,14 @@ def _needs_local_tool_handling(llm: Any) -> bool:
 
 
 def wrap_model_for_tools(model: Any, tools: List) -> Any:
-    if not tools or not _needs_local_tool_handling(model):
+    if not tools:
+        return model
+
+    if isinstance(model, ChatOpenAI):
+        _patch_openai_content_stripping(model)
+        return model
+
+    if not _needs_local_tool_handling(model):
         return model
 
     valid_tool_names = {t.name for t in tools}
