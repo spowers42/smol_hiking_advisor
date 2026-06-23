@@ -103,9 +103,51 @@ def _ensure_sync_tools(tools: List) -> List:
     return out
 
 
+def _patch_empty_schema(tools: List) -> None:
+    """Work around a llama.cpp server bug that rejects empty tool parameter schemas.
+
+    The llama.cpp server returns HTTP 500 when it receives a tool definition with
+    an empty parameters object::
+
+        "parameters": {"type": "object", "properties": {}}
+
+    This happens at tool *registration* time, before any tool is called. The error
+    originates inside the server's grammar/conversion layer which expects *at least
+    one* property when ``type`` is ``"object"``.
+
+    We work around it by injecting a hidden ``unused`` string field with a default
+    value of ``""`` into every empty schema. Both Pyright model schemas and raw
+    dict schemas are patched.
+
+    The corresponding tool functions should also accept ``**kwargs`` so they don't
+    break if the model ever passes the ``unused`` parameter.
+    """
+    from pydantic import BaseModel, Field
+
+    for t in tools:
+        schema = t.args_schema
+        if not schema:
+            continue
+        if isinstance(schema, type) and issubclass(schema, BaseModel) and not schema.model_fields:
+
+            class _Patched(schema):  # type: ignore
+                unused: str = Field(default="", description="(internal)")
+
+            _Patched.__name__ = schema.__name__
+            t.args_schema = _Patched
+        elif isinstance(schema, dict):
+            props = schema.get("properties", {})
+            if not props:
+                schema.setdefault("properties", {})["unused"] = {
+                    "type": "string",
+                    "description": "(internal)",
+                }
+
+
 class SimpleReActAgent:
     def __init__(self, llm, tools, prompt, max_iterations=10):
         sync_tools = _ensure_sync_tools(list(tools))
+        _patch_empty_schema(sync_tools)
         wrapped = wrap_model_for_tools(llm, sync_tools)
         self._agent = create_agent(
             model=wrapped,

@@ -21,7 +21,7 @@ class TestRuntimeConfig:
 
     def test_default_max_iterations(self):
         config = RuntimeConfig(llm=MagicMock())
-        assert config.max_iterations == 10
+        assert config.max_iterations == 15
 
 
 class TestAgentRuntime:
@@ -42,7 +42,7 @@ class TestAgentRuntime:
 
         assert result["messages"][-1].content == "Mount Major is great."
         mock_simple_agent.assert_called_once_with(
-            llm=config.llm, tools=config.tools, prompt=config.prompt, max_iterations=10
+            llm=config.llm, tools=config.tools, prompt=config.prompt, max_iterations=15
         )
 
     @patch("app.runtime.SimpleReActAgent")

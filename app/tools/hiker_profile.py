@@ -14,7 +14,7 @@ def set_hiker_profile(fitness: int, experience: int, group_size: str) -> None:
 
 
 @tool
-def get_hiker_profile() -> dict[str, int | str]:
+def get_hiker_profile(**kwargs) -> dict[str, int | str]:
     """Get the current hiker profile (fitness level, experience level, and group size).
 
     Returns:

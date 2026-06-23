@@ -1,7 +1,9 @@
 from unittest.mock import AsyncMock, patch
 
+import pytest
+
+import app.tools.weather
 from app.tools.weather import (
-    _mcp_client,
     connect_async,
     get_weather_tools,
     is_connected,
@@ -15,11 +17,21 @@ class TestGetWeatherTools:
 
 
 class TestIsConnected:
+    @pytest.fixture(autouse=True)
+    def _reset_weather_state(self):
+        app.tools.weather._mcp_client = None
+        app.tools.weather._weather_tools = []
+
     def test_returns_false_when_not_connected(self):
         assert is_connected() is False
 
 
 class TestConnectAsync:
+    @pytest.fixture(autouse=True)
+    def _reset_weather_state(self):
+        app.tools.weather._mcp_client = None
+        app.tools.weather._weather_tools = []
+
     async def test_skips_connection_when_url_empty(self, monkeypatch):
         monkeypatch.setenv("MCP_WEATHER_URL", "")
         await connect_async()
@@ -38,7 +50,7 @@ class TestConnectAsync:
 
             tools = get_weather_tools()
             assert len(tools) == 0
-            assert _mcp_client is None
+            assert app.tools.weather._mcp_client is None
             mock_build.assert_not_called()
 
     async def test_stores_mcp_and_resource_tools_on_success(self):

@@ -1,44 +1,80 @@
+import tempfile
+from pathlib import Path
+
 import pytest
 
 from app.constants import build_system_prompt
-from app.skills import SKILL_REGISTRY, Skill, build_skills_section
+from app.skills import Skill, build_skills_section, clear_registry, seed_registry
 from app.skills.loader import load_skill
+
+
+@pytest.fixture(autouse=True)
+def reset_registry():
+    clear_registry()
+    yield
+    clear_registry()
 
 
 @pytest.fixture
 def registered_skill():
-    SKILL_REGISTRY["trail_analysis"] = Skill(
-        prompt="You are a trail analysis expert.",
-        description="Analyze trail difficulty, elevation, and distance.",
-        references=["app/skills/prompts/trails.md"],
+    seed_registry(
+        {
+            "trail_analysis": Skill(
+                name="trail_analysis",
+                description="Analyze trail difficulty, elevation, and distance.",
+            ),
+        }
     )
     yield
-    SKILL_REGISTRY.clear()
+
+
+@pytest.fixture
+def skill_on_disk():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        skill_dir = Path(tmpdir) / "trail-analysis"
+        skill_dir.mkdir()
+        skill_file = skill_dir / "SKILL.md"
+        skill_file.write_text(
+            "---\n"
+            "name: trail-analysis\n"
+            "description: Analyze trail difficulty, elevation, and distance.\n"
+            "---\n"
+            "\n"
+            "You are a trail analysis expert."
+        )
+        seed_registry(
+            {
+                "trail-analysis": Skill(
+                    name="trail-analysis",
+                    description="Analyze trail difficulty, elevation, and distance.",
+                    path=str(skill_dir),
+                ),
+            }
+        )
+        yield
 
 
 class TestSkill:
     def test_default_references_is_empty(self):
-        skill = Skill(prompt="You are a test.")
+        skill = Skill(name="test")
         assert skill.references == []
 
     def test_can_set_references(self):
-        skill = Skill(prompt="You are a test.", references=["ref1", "ref2"])
+        skill = Skill(name="test", references=["ref1", "ref2"])
         assert skill.references == ["ref1", "ref2"]
 
     def test_default_description_is_empty(self):
-        skill = Skill(prompt="You are a test.")
+        skill = Skill(name="test")
         assert skill.description == ""
 
     def test_can_set_description(self):
-        skill = Skill(prompt="You are a test.", description="Expert trail analysis.")
+        skill = Skill(name="test", description="Expert trail analysis.")
         assert skill.description == "Expert trail analysis."
 
 
 class TestBuildSkillsSection:
-    def setup_method(self):
-        SKILL_REGISTRY.clear()
-
     def test_returns_empty_when_registry_empty(self):
+        seed_registry({})
         assert build_skills_section() == ""
 
     def test_lists_skill_names(self, registered_skill):
@@ -51,16 +87,17 @@ class TestBuildSkillsSection:
         assert "Analyze trail difficulty" in section
 
     def test_sorts_alphabetically(self):
-        SKILL_REGISTRY["z_skill"] = Skill(prompt="Z")
-        SKILL_REGISTRY["a_skill"] = Skill(prompt="A")
+        seed_registry(
+            {
+                "z_skill": Skill(name="z_skill"),
+                "a_skill": Skill(name="a_skill"),
+            }
+        )
         section = build_skills_section()
         assert section.index("a_skill") < section.index("z_skill")
 
 
 class TestBuildSystemPrompt:
-    def setup_method(self):
-        SKILL_REGISTRY.clear()
-
     def test_includes_skills_section_when_skills_registered(self, registered_skill):
         prompt = build_system_prompt()
         assert "Available skills:" in prompt
@@ -68,6 +105,7 @@ class TestBuildSystemPrompt:
         assert "Analyze trail difficulty" in prompt
 
     def test_omits_skills_section_when_no_skills(self):
+        seed_registry({})
         prompt = build_system_prompt()
         assert "Available skills:" not in prompt
 
@@ -79,20 +117,21 @@ class TestBuildSystemPrompt:
 
 
 class TestLoadSkill:
-    def setup_method(self):
-        SKILL_REGISTRY.clear()
-
     def test_returns_empty_message_when_no_skills_registered(self):
+        seed_registry({})
         result = load_skill.invoke({"skill_name": "trail_analysis"})
         assert "No skills are registered" in result
 
-    def test_returns_skill_prompt_from_registry(self, registered_skill):
-        result = load_skill.invoke({"skill_name": "trail_analysis"})
+    def test_returns_skill_body_from_disk(self, skill_on_disk):
+        result = load_skill.invoke({"skill_name": "trail-analysis"})
         assert "You are a trail analysis expert." in result
-        assert "app/skills/prompts/trails.md" in result
 
     def test_returns_error_for_unknown_skill(self):
-        SKILL_REGISTRY["known_skill"] = Skill(prompt="You are known.")
+        seed_registry(
+            {
+                "known_skill": Skill(name="known_skill"),
+            }
+        )
         result = load_skill.invoke({"skill_name": "nonsense"})
         assert "Unknown skill" in result
         assert "known_skill" in result

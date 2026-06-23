@@ -21,12 +21,12 @@ tasks:
   test:
     desc: Run unit tests (excludes evals)
     cmds:
-      - uv run pytest --ignore=tests/evals
+      - uv run pytest --ignore=tests/evals -vv
 
   eval:
     desc: Run agent evaluation suite (golden test cases)
     cmds:
-      - uv run pytest tests/evals/
+      - uv run pytest tests/evals/ -vv
 
   run:
     desc: Run the Gradio app locally
