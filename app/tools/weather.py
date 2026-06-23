@@ -57,7 +57,7 @@ async def _build_resource_tool(uri: str, name: str, description: str):
     client = _mcp_client
 
     @tool(description=description)
-    async def resource_tool() -> str:
+    async def resource_tool(**kwargs) -> str:
         async with client.session("mt-washington") as session:
             blobs = await load_mcp_resources(session, uris=[uri])
         if not blobs:

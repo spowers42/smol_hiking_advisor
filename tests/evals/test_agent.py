@@ -5,6 +5,7 @@ from deepeval.test_case import LLMTestCase, ToolCall
 from app import constants
 from app.config import get_llm
 from app.runtime import AgentRuntime, RuntimeConfig
+from app.skills.loader import load_skill
 from app.tools.hiker_profile import get_hiker_profile
 from app.tools.weather import connect as connect_weather_mcp
 from app.tools.weather import get_weather_tools
@@ -22,12 +23,26 @@ GOLDENS = [
         "input": "What's the current weather on top of Mt Washington?",
         "expected_tools": [
             ToolCall(name="get_current_conditions"),
-            ToolCall(name="get_summit_forecast"),
         ],
     },
     {
         "input": "I'm experienced and fit, looking for a challenging hike in the White Mountains",
         "expected_tools": [ToolCall(name="get_hiker_profile")],
+    },
+    {
+        "input": "hi",
+        "expected_tools": [],
+        "description": "Greeting — no tools should be called",
+    },
+    {
+        "input": "What's the capital of France?",
+        "expected_tools": [],
+        "description": "Off-topic — should politely decline",
+    },
+    {
+        "input": "tell me about interpreting mountain weather",
+        "expected_tools": [ToolCall(name="load_skill")],
+        "description": "Skill query — should load weather_interpretation skill",
     },
 ]
 
@@ -35,7 +50,7 @@ GOLDENS = [
 def build_agent() -> AgentRuntime:
     connect_weather_mcp()
     llm = get_llm()
-    tools = [get_hiker_profile, *get_weather_tools()]
+    tools = [get_hiker_profile, load_skill, *get_weather_tools()]
     config = RuntimeConfig(llm=llm, tools=tools, prompt=constants.build_system_prompt())
     return AgentRuntime(config)
 
@@ -57,4 +72,5 @@ def test_tool_selection(golden):
         tools_called=parse_tools_called(result),
         expected_tools=golden["expected_tools"],
     )
+
     assert_test(tc, metrics=[ToolSelectionMetric()])

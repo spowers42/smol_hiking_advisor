@@ -28,8 +28,13 @@ class ToolSelectionMetric(BaseMetric):
         expected_names = {tc.name for tc in (test_case.expected_tools or [])}
 
         if not expected_names:
+            if called_names:
+                self.score = 0.0
+                self.reason = f"Tools called when none expected: {', '.join(sorted(called_names))}"
+                self.success = False
+                return self.score
             self.score = 1.0
-            self.reason = "No expected tools — skipping evaluation."
+            self.reason = "No tools expected and none called."
             self.success = True
             return self.score
 

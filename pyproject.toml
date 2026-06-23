@@ -13,6 +13,7 @@ dependencies = [
     "langchain-mcp-adapters>=0.3",
     "langchain-openai>=0.3",
     "langgraph>=0.4",
+    "llama-cpp-python>=0.3.31",
     "mcp>=1",
     "pydantic>=2",
     "python-dotenv>=1",
@@ -40,4 +41,9 @@ quote-style = "double"
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests/unit"]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.18",
+]
 

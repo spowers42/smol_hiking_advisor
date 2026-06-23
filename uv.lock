@@ -448,6 +448,15 @@ wheels = [
 ]
 
 [[package]]
+name = "diskcache"
+version = "5.6.3"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/3f/21/1c1ffc1a039ddcc459db43cc108658f32c57d271d7289a2794e401d0fdb6/diskcache-5.6.3.tar.gz", hash = "sha256:2c3a3fa2743d8535d832ec61c2054a1641f41775aa7c556758a109941e33e4fc", size = 67916, upload-time = "2023-08-31T06:12:00.316Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3f/27/4570e78fc0bf5ea0ca45eb1de3818a23787af9b390c0b0a0033a1b8236f9/diskcache-5.6.3-py3-none-any.whl", hash = "sha256:5e31b2d5fbad117cc363ebaf6b689474db18a1f6438bc82358b024abd4c2ca19", size = 45550, upload-time = "2023-08-31T06:11:58.822Z" },
+]
+
+[[package]]
 name = "distro"
 version = "1.9.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1099,6 +1108,18 @@ sdist = { url = "https://files.pythonhosted.org/packages/ad/aa/30295e5b27b86a607
 wheels = [
     { url = "https://files.pythonhosted.org/packages/09/04/3dddd1e331e000f942b174a7bf3382422dc2a8414ef8786efb2e9f9f5d6d/langsmith-0.8.17-py3-none-any.whl", hash = "sha256:62796120a46781a8c717b3d2e846e94343334b57bd504cc10b61a5d2e4739c5a", size = 507791, upload-time = "2026-06-18T20:56:17.959Z" },
 ]
+
+[[package]]
+name = "llama-cpp-python"
+version = "0.3.31"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "diskcache" },
+    { name = "jinja2" },
+    { name = "numpy" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e1/17/16fa56a288d66cc6c00f791c8f5af0acd5dbf8005be9e875da670b51652d/llama_cpp_python-0.3.31.tar.gz", hash = "sha256:c3fd23b2c7197770321020a89f23c6515a366511dce4fcda1e81cfb749267a94", size = 70091532, upload-time = "2026-06-20T08:49:57.393Z" }
 
 [[package]]
 name = "markdown-it-py"
@@ -2227,6 +2248,7 @@ dependencies = [
     { name = "langchain-mcp-adapters" },
     { name = "langchain-openai" },
     { name = "langgraph" },
+    { name = "llama-cpp-python" },
     { name = "mcp" },
     { name = "pydantic" },
     { name = "python-dotenv" },
@@ -2241,6 +2263,11 @@ dev = [
     { name = "ruff" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "ruff" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "deepeval", specifier = ">=4.0.6" },
@@ -2251,6 +2278,7 @@ requires-dist = [
     { name = "langchain-mcp-adapters", specifier = ">=0.3" },
     { name = "langchain-openai", specifier = ">=0.3" },
     { name = "langgraph", specifier = ">=0.4" },
+    { name = "llama-cpp-python", specifier = ">=0.3.31" },
     { name = "mcp", specifier = ">=1" },
     { name = "pydantic", specifier = ">=2" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8" },
@@ -2261,6 +2289,9 @@ requires-dist = [
     { name = "transformers", specifier = ">=4" },
 ]
 provides-extras = ["dev"]
+
+[package.metadata.requires-dev]
+dev = [{ name = "ruff", specifier = ">=0.15.18" }]
 
 [[package]]
 name = "sniffio"

@@ -14,7 +14,7 @@ class RuntimeConfig:
     llm: Any
     tools: list = field(default_factory=list)
     prompt: str = ""
-    max_iterations: int = 10
+    max_iterations: int = 15
 
 
 class AgentRuntime:

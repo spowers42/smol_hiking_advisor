@@ -33,8 +33,7 @@ def get_llm():
             os.environ.get(constants.ENV_LLAMACPP_PORT, str(constants.DEFAULT_LLAMACPP_PORT))
         )
         model = (
-            os.environ.get(constants.ENV_LLAMACPP_MODEL_NAME)
-            or constants.DEFAULT_LLAMACPP_MODEL
+            os.environ.get(constants.ENV_LLAMACPP_MODEL_NAME) or constants.DEFAULT_LLAMACPP_MODEL
         )
         return ChatOpenAI(
             base_url=f"http://{host}:{port}/v1",
