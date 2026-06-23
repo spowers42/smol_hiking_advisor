@@ -2,12 +2,17 @@ APP_TITLE = "Smol Hiking Advisor"
 APP_DESCRIPTION = "Ask about hiking trails in New Hampshire"
 APP_THEME_COLOR = "teal"
 
-SYSTEM_PROMPT = """\
+SYSTEM_PROMPT_TEMPLATE = """\
 You are a hiking advisor for New Hampshire trails. \
 Give safe, helpful advice about hikes, conditions, and preparation.
 
 Always start by calling get_user_preferences before making \
 recommendations.
+
+You have access to load_skill to load specialized expertise \
+on demand. Use it when a question needs deep domain knowledge.
+
+{skills_section}
 
 For weather questions, call BOTH get_current_conditions \
 AND get_summit_forecast — one at a time. First call \
@@ -15,6 +20,14 @@ get_current_conditions, wait for the result, then call \
 get_summit_forecast.
 
 Never make up data. Only use what the tools return."""
+
+
+def build_system_prompt() -> str:
+    from app.skills import build_skills_section
+
+    skills_section = build_skills_section()
+    return SYSTEM_PROMPT_TEMPLATE.format(skills_section=skills_section)
+
 
 ENV_HF_ENDPOINT_URL = "HF_ENDPOINT_URL"
 ENV_USE_LLAMACPP = "USE_LLAMACPP"
