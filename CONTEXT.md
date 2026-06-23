@@ -13,6 +13,10 @@ The agent's lifecycle and invocation seam. Accepts a `RuntimeConfig` that bundle
 
 The ReAct loop. Not meant to be used directly by production code — go through `AgentRuntime`.
 
+### Skills (`app/skills/`)
+
+On-demand skill loading infrastructure following the LangChain skills pattern. A `SkillDef` dataclass holds a specialized prompt and optional reference paths. Skills are registered in the `SKILL_REGISTRY` dict and loaded at runtime via the `load_skill` tool. See `docs/agents/domain.md` for details.
+
 ## Upstream data sources
 
 ### Mt Washington Observatory (MCP)

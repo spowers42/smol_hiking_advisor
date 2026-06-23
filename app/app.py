@@ -3,14 +3,16 @@ import gradio as gr
 from app import constants
 from app.config import get_llm
 from app.runtime import AgentRuntime, RuntimeConfig
+from app.skills.loader import load_skill
 from app.tools.user_preferences import get_user_preferences, set_preferences
 from app.tools.weather import connect as connect_weather_mcp
 from app.tools.weather import get_weather_tools
 
 connect_weather_mcp()
 llm = get_llm()
-tools = [get_user_preferences, *get_weather_tools()]
-config = RuntimeConfig(llm=llm, tools=tools, prompt=constants.SYSTEM_PROMPT)
+tools = [get_user_preferences, load_skill, *get_weather_tools()]
+prompt = constants.build_system_prompt()
+config = RuntimeConfig(llm=llm, tools=tools, prompt=prompt)
 agent_executor = AgentRuntime(config)
 
 
