@@ -2,13 +2,13 @@ from dataclasses import dataclass, field
 
 
 @dataclass
-class SkillDef:
+class Skill:
     prompt: str
     description: str = ""
     references: list[str] = field(default_factory=list)
 
 
-SKILL_REGISTRY: dict[str, SkillDef] = {}
+SKILL_REGISTRY: dict[str, Skill] = {}
 
 
 def build_skills_section() -> str:

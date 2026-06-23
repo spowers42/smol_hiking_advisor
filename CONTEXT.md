@@ -1,28 +1,13 @@
-# Domain context
+# Glossary
 
-## Architecture
+**Hiker profile** — a per-session record of the hiker's fitness level (1–10), experience level (1–10), and group size (Solo, 2–3, 3+). Set via the sidebar, read by the agent on every query.
 
-### AgentRuntime (`app/runtime.py`)
+**Mt Washington Observatory** — an upstream data source providing real-time summit weather, summit/valley forecasts, past-24h statistics, and almanac data via MCP.
 
-The agent's lifecycle and invocation seam. Accepts a `RuntimeConfig` that bundles the LLM, tools, prompt, and max iteration count. Callers wire their own dependencies — no global singletons, no side effects at import time.
+**Skill** — a packaged specialization the agent can load on demand. Each skill has a prompt, a short description for the system-prompt listing, and optional references to external files.
 
-- **RuntimeConfig** — data class holding `llm`, `tools`, `prompt`, `max_iterations`. The single point of configuration for an agent instance.
-- **AgentRuntime** — wraps `SimpleReActAgent` behind a stable interface. Currently exposes `invoke(input_dict)`. Future depth: logging, tracing, retry logic.
+**Skill registry** — the central catalog of available skills. Named skills are looked up at runtime by the `load_skill` tool.
 
-### SimpleReActAgent (`app/agent.py`)
+**Coding-agent skills** — skills stored in `.agents/skills/` that extend the AI coding agent's development workflow (e.g. deepeval).
 
-The ReAct loop. Not meant to be used directly by production code — go through `AgentRuntime`.
-
-### Skills (`app/skills/`)
-
-On-demand skill loading infrastructure following the LangChain skills pattern. A `SkillDef` dataclass holds a specialized prompt and optional reference paths. Skills are registered in the `SKILL_REGISTRY` dict and loaded at runtime via the `load_skill` tool. See `docs/agents/domain.md` for details.
-
-## Upstream data sources
-
-### Mt Washington Observatory (MCP)
-
-Real-time weather conditions, summit forecasts, valley forecasts, past-24h statistics, and almanac data. Accessed through a FastMCP server at `mt-washington-weather.fastmcp.app`. Connection is managed by the weather tool module (`app/tools/weather.py`) and tools are injected into the runtime by the caller.
-
-### Hiker profile
-
-Per-session user preferences (fitness level, experience, group size). Stored in a module-level dict in `app/tools/user_preferences.py`. Set via the Gradio sidebar, read by the agent.
+**Tooling skills** — skills stored in `.opencode/skills/` that wrap development workflows like PR creation.
