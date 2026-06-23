@@ -26,7 +26,7 @@ class TestGetLLM:
         mock_chat_openai.assert_called_once_with(
             base_url="http://localhost:8080/v1",
             api_key="not-needed",
-            model=None,
+            model="default",
         )
         assert result is mock_chat_openai.return_value
 
@@ -46,7 +46,7 @@ class TestGetLLM:
         mock_chat_openai.assert_called_once_with(
             base_url="http://10.0.0.5:8088/v1",
             api_key="not-needed",
-            model=None,
+            model="default",
         )
         assert result is mock_chat_openai.return_value
 

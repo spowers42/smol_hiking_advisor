@@ -45,6 +45,7 @@ TRUTHY_VALUES = ("1", "true", "yes")
 
 DEFAULT_LLAMACPP_HOST = "localhost"
 DEFAULT_LLAMACPP_PORT = 8080
+DEFAULT_LLAMACPP_MODEL = "default"
 DEFAULT_MODEL_NAME = "meta-llama/Llama-3.2-3B-Instruct"
 FALLBACK_MODEL_NAME = "microsoft/Phi-3-mini-4k-instruct"
 
