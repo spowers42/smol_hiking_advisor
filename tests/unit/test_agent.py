@@ -1,8 +1,118 @@
 from unittest.mock import MagicMock, patch
 
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+from langchain_core.outputs import ChatGeneration, ChatResult
+from langchain_openai import ChatOpenAI
 
-from app.agent import SimpleReActAgent
+from app.agent import (
+    SimpleReActAgent,
+    _patch_openai_content_stripping,
+    _strip_tool_call_content,
+)
+
+
+class TestStripToolCallContent:
+    _LLAMA_TOOL = {
+        "name": "load_skill",
+        "args": {"skill_name": "trail-safety"},
+        "id": "1",
+        "type": "tool_call",
+    }
+    _LLAMA_TOOL_2 = {
+        "name": "load_skill",
+        "args": {"skill_name": "trail-safety"},
+        "id": "2",
+        "type": "tool_call",
+    }
+    _GET_CONDITIONS = {"name": "get_conditions", "args": {}, "id": "1", "type": "tool_call"}
+    _LOAD_SKILL_EMPTY = {"name": "load_skill", "args": {}, "id": "1", "type": "tool_call"}
+
+    def test_clears_content_when_tool_calls_and_json_content(self):
+        msg = AIMessage(
+            content='; {"name": "load_skill", "parameters": {"skill_name": "trail-safety"}}',
+            tool_calls=[self._LLAMA_TOOL],
+        )
+        result = ChatResult(generations=[ChatGeneration(message=msg)])
+        cleaned = _strip_tool_call_content(result)
+        assert cleaned.generations[0].message.content == ""
+
+    def test_preserves_content_when_no_tool_calls(self):
+        msg = AIMessage(content="Nice day for a hike!")
+        result = ChatResult(generations=[ChatGeneration(message=msg)])
+        cleaned = _strip_tool_call_content(result)
+        assert cleaned.generations[0].message.content == "Nice day for a hike!"
+
+    def test_preserves_content_when_no_json_pattern(self):
+        msg = AIMessage(
+            content="I'll look up the trail conditions.",
+            tool_calls=[self._GET_CONDITIONS],
+        )
+        result = ChatResult(generations=[ChatGeneration(message=msg)])
+        cleaned = _strip_tool_call_content(result)
+        assert cleaned.generations[0].message.content == "I'll look up the trail conditions."
+
+    def test_clears_duplicate_tool_calls_content(self):
+        msg = AIMessage(
+            content=(
+                '; {"name": "load_skill", "parameters": {"skill_name": "trail-safety"}};'
+                ' {"name": "load_skill", "parameters": {"skill_name": "trail-safety"}}'
+            ),
+            tool_calls=[self._LLAMA_TOOL, self._LLAMA_TOOL_2],
+        )
+        result = ChatResult(generations=[ChatGeneration(message=msg)])
+        cleaned = _strip_tool_call_content(result)
+        assert cleaned.generations[0].message.content == ""
+
+    def test_clears_function_format_content(self):
+        msg = AIMessage(
+            content='{"function": "load_skill", "arguments": {"skill_name": "trail-safety"}}',
+            tool_calls=[self._LLAMA_TOOL],
+        )
+        result = ChatResult(generations=[ChatGeneration(message=msg)])
+        cleaned = _strip_tool_call_content(result)
+        assert cleaned.generations[0].message.content == ""
+
+    def test_handles_non_ai_message(self):
+        msg = ToolMessage(content="result", tool_call_id="1")
+        result = ChatResult(generations=[ChatGeneration(message=msg)])
+        cleaned = _strip_tool_call_content(result)
+        assert cleaned.generations[0].message.content == "result"
+
+    def test_preserves_empty_content_with_tool_calls(self):
+        msg = AIMessage(
+            content="",
+            tool_calls=[self._LOAD_SKILL_EMPTY],
+        )
+        result = ChatResult(generations=[ChatGeneration(message=msg)])
+        cleaned = _strip_tool_call_content(result)
+        assert cleaned.generations[0].message.content == ""
+
+    def test_preserves_content_with_tool_calls_no_json_pattern(self):
+        msg = AIMessage(
+            content="I found the trail info.",
+            tool_calls=[self._LLAMA_TOOL],
+        )
+        result = ChatResult(generations=[ChatGeneration(message=msg)])
+        cleaned = _strip_tool_call_content(result)
+        assert cleaned.generations[0].message.content == "I found the trail info."
+
+
+class TestPatchOpenAIContentStripping:
+    _EMPTY_TOOL = {"name": "load_skill", "args": {}, "id": "1", "type": "tool_call"}
+
+    def test_patches_generate_method(self):
+        model = MagicMock(spec=ChatOpenAI)
+        original = model._generate
+        _patch_openai_content_stripping(model)
+        assert model._generate is not original
+        msg = AIMessage(
+            content='{"name": "load_skill", "parameters": {"skill_name": "trail-safety"}}',
+            tool_calls=[self._EMPTY_TOOL],
+        )
+        original.return_value = ChatResult(generations=[ChatGeneration(message=msg)])
+        result = model._generate([])
+        assert isinstance(result, ChatResult)
+        assert result.generations[0].message.content == ""
 
 
 class TestSimpleReActAgent:
