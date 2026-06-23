@@ -11,8 +11,8 @@ Specialized capabilities packaged as "skills" that the agent loads on-demand at 
 
 ### Key concepts
 
-- **SkillDef** — a dataclass with `prompt` (the specialization prompt) and `references` (optional file paths/resources).
-- **SKILL_REGISTRY** — module-level `dict[str, SkillDef]` mapping skill names to their definitions. Populated at import time or during startup.
+- **Skill** — a dataclass with `prompt` (the specialization prompt), `description` (short one-liner for the system prompt listing), and `references` (optional file paths/resources).
+- **SKILL_REGISTRY** — module-level `dict[str, Skill]` mapping skill names to their definitions. Populated at import time or during startup.
 - **load_skill** — a `@tool`-decorated function added to the agent's tool list. The agent calls it with a skill name and receives the skill's prompt plus any reference context.
 
 ### Architecture
@@ -21,12 +21,12 @@ Skills follow progressive disclosure: the base system prompt only tells the agen
 
 ### Extending
 
-To add a new skill, create a `SkillDef` and insert it into `SKILL_REGISTRY`:
+To add a new skill, create a `Skill` and insert it into `SKILL_REGISTRY`:
 
 ```python
-from app.skills import SKILL_REGISTRY, SkillDef
+from app.skills import SKILL_REGISTRY, Skill
 
-SKILL_REGISTRY["trail_analysis"] = SkillDef(
+SKILL_REGISTRY["trail_analysis"] = Skill(
     prompt="You are a trail analysis expert...",
     references=["app/skills/prompts/trails.md"],
 )

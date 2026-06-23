@@ -4,13 +4,13 @@ from app import constants
 from app.config import get_llm
 from app.runtime import AgentRuntime, RuntimeConfig
 from app.skills.loader import load_skill
-from app.tools.user_preferences import get_user_preferences, set_preferences
+from app.tools.hiker_profile import get_hiker_profile, set_hiker_profile
 from app.tools.weather import connect as connect_weather_mcp
 from app.tools.weather import get_weather_tools
 
 connect_weather_mcp()
 llm = get_llm()
-tools = [get_user_preferences, load_skill, *get_weather_tools()]
+tools = [get_hiker_profile, load_skill, *get_weather_tools()]
 prompt = constants.build_system_prompt()
 config = RuntimeConfig(llm=llm, tools=tools, prompt=prompt)
 agent_executor = AgentRuntime(config)
@@ -22,7 +22,7 @@ def respond(message, history):
 
 
 def update_prefs(fitness: int, experience: int, group: str):
-    set_preferences(fitness=fitness, experience=experience, group_size=group)
+    set_hiker_profile(fitness=fitness, experience=experience, group_size=group)
 
 
 with gr.Blocks(

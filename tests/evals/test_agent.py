@@ -5,7 +5,7 @@ from deepeval.test_case import LLMTestCase, ToolCall
 from app import constants
 from app.config import get_llm
 from app.runtime import AgentRuntime, RuntimeConfig
-from app.tools.user_preferences import get_user_preferences
+from app.tools.hiker_profile import get_hiker_profile
 from app.tools.weather import connect as connect_weather_mcp
 from app.tools.weather import get_weather_tools
 
@@ -16,7 +16,7 @@ WEATHER_TOOL_NAMES = {"get_current_conditions", "get_summit_forecast"}
 GOLDENS = [
     {
         "input": "What's a good hike for me today?",
-        "expected_tools": [ToolCall(name="get_user_preferences")],
+        "expected_tools": [ToolCall(name="get_hiker_profile")],
     },
     {
         "input": "What's the current weather on top of Mt Washington?",
@@ -27,7 +27,7 @@ GOLDENS = [
     },
     {
         "input": "I'm experienced and fit, looking for a challenging hike in the White Mountains",
-        "expected_tools": [ToolCall(name="get_user_preferences")],
+        "expected_tools": [ToolCall(name="get_hiker_profile")],
     },
 ]
 
@@ -35,8 +35,8 @@ GOLDENS = [
 def build_agent() -> AgentRuntime:
     connect_weather_mcp()
     llm = get_llm()
-    tools = [get_user_preferences, *get_weather_tools()]
-    config = RuntimeConfig(llm=llm, tools=tools, prompt=constants.SYSTEM_PROMPT)
+    tools = [get_hiker_profile, *get_weather_tools()]
+    config = RuntimeConfig(llm=llm, tools=tools, prompt=constants.build_system_prompt())
     return AgentRuntime(config)
 
 
