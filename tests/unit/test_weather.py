@@ -81,3 +81,28 @@ class TestConnectAsync:
             assert tools[0].name == "extract_f6_csv"
             assert tools[1].name == "get_current_conditions"
             assert mock_build.call_count == 5
+
+
+class TestResourceTool:
+    @pytest.fixture(autouse=True)
+    def _reset_weather_state(self):
+        app.tools.weather._mcp_client = None
+        app.tools.weather._weather_tools = []
+
+    async def test_returns_graceful_message_on_session_failure(self):
+        mock_client = AsyncMock(spec=["session"])
+        mock_cm = AsyncMock()
+        mock_cm.__aenter__.side_effect = ConnectionError("MCP server unreachable")
+        mock_cm.__aexit__ = AsyncMock(return_value=None)
+        mock_client.session.return_value = mock_cm
+        app.tools.weather._mcp_client = mock_client
+
+        tool = await app.tools.weather._build_resource_tool(
+            "weather://current",
+            "get_current_conditions",
+            "Current summit weather",
+        )
+
+        result = await tool.ainvoke({})
+
+        assert result == "Weather data is currently unavailable. Please try again later."

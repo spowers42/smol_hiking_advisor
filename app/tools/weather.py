@@ -58,8 +58,12 @@ async def _build_resource_tool(uri: str, name: str, description: str):
 
     @tool(description=description)
     async def resource_tool(**kwargs) -> str:
-        async with client.session("mt-washington") as session:
-            blobs = await load_mcp_resources(session, uris=[uri])
+        try:
+            async with client.session("mt-washington") as session:
+                blobs = await load_mcp_resources(session, uris=[uri])
+        except Exception:
+            logger.warning("MCP resource %s unavailable", uri)
+            return "Weather data is currently unavailable. Please try again later."
         if not blobs:
             return "No data available."
         parts = []
