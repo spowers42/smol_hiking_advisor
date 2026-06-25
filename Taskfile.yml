@@ -1,6 +1,13 @@
 version: "3"
 
 tasks:
+  init:
+    desc: Run initial project setup
+    cmds:
+      - cp .env.sample .env
+      - task: install
+      - task: fetch-models 
+
   install:
     desc: Install project with dev dependencies
     cmds:
