@@ -6,20 +6,19 @@ This is a specialist hiking planning agent for trails in New Hampshire, specific
 
 - Python 3.14+
 - [uv](https://docs.astral.sh/uv/) (package manager)
+- [task](https://taskfile.dev/) ( task runner)
 
 ## Setup
 
 ```bash
 git clone <repo-url>
 cd smol_hiking_advisor
-uv sync --extra dev
+task init
 ```
+The init command will copy the sample environment configuration to .env and install all 
+dependencies, including developer dependencies.  It also fetches the models used for the local llama.cpp server.
 
-Copy and configure environment variables:
-
-```bash
-cp .env.example .env
-```
+Configure environment variables:
 
 Three LLM backends are supported (evaluated in priority order):
 
@@ -50,33 +49,27 @@ Then run the app:
 task run
 ```
 
-Other [Task](https://taskfile.dev/) commands:
+All available [Task](https://taskfile.dev/) commands:
 
-```bash
-task lint     # ruff check
-task test     # pytest
-task all      # lint + test
-```
+| Command | Description |
+|---|---|
+| `task init` | Full project setup (copies `.env`, installs deps, downloads models) |
+| `task install` | Install project with dev dependencies |
+| `task lint` | Run ruff linter and formatter checks |
+| `task lint-fix` | Auto-fix lint issues and format |
+| `task test` | Run unit tests (excludes evals) |
+| `task eval` | Run agent evaluation suite (golden test cases) |
+| `task run` | Run the Gradio app locally |
+| `task build` | Build the Python package |
+| `task publish` | Publish to PyPI |
+| `task fetch-models` | Download GGUF model files from `models.ini` |
+| `task all` | Run lint + test + eval |
 
 ## Models
 
-`models.ini` at the project root configures models in [llama.cpp preset format](https://github.com/ggml-org/llama.cpp/blob/master/docs/preset.md). Each section other than `[*]` defines a model alias that is exposed via the [router server](https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md):
+`models.ini` at the project root configures models in [llama.cpp preset format](https://github.com/ggml-org/llama.cpp/blob/master/docs/preset.md). 
 
-```ini
-[*]
-n-gpu-layers = 999
-flash-attn   = 1
-no-mmap      = true
-
-[llama-3.1-8b]
-hf = unsloth/Llama-3.1-8B-Instruct-GGUF:UD-Q4_K_XL
 ```
-
-The server also supports `--models-dir models/` to look for local `.gguf` files alongside the HF auto-download.
-
-To pre-download all model files into `models/` (gitignored):
-
-```bash
 task fetch-models
 ```
 
