@@ -43,6 +43,13 @@ tasks:
     cmds:
       - uv publish
 
+  fetch-models:
+    desc: Download GGUF model files into models/ from models.ini
+    deps:
+      - install
+    cmds:
+      - uv run python tools/download-models.py
+
   all:
     desc: Run lint and tests
     cmds:
