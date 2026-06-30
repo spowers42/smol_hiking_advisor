@@ -28,12 +28,18 @@ def update_prefs(fitness: int, experience: int, group: str):
 with gr.Blocks(
     title=constants.APP_TITLE,
     fill_height=True,
-    css="#app-title { text-align: center; }",
+    css="""
+        #app-title { text-align: center; }
+        #chat-column {
+            height: 70vh;
+            min-height: 400px;
+        }
+    """,
 ) as demo:
     gr.Markdown(f"# {constants.APP_TITLE}", elem_id="app-title")
     gr.Markdown(constants.APP_DESCRIPTION)
     with gr.Row(equal_height=False):
-        with gr.Column(scale=3):
+        with gr.Column(scale=3, elem_id="chat-column"):
             gr.ChatInterface(fn=respond)
         with gr.Column(scale=1, min_width=240):
             with gr.Accordion(label="Hiker Profile", open=True):
